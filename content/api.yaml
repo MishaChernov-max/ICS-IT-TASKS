@@ -1,0 +1,227 @@
+openapi: 3.0.0
+info:
+  title: Gramax API
+  description: API для работы с каталогами и статьями в Gramax
+  version: 1.0.0
+  contact:
+    name: Контакты
+    url: https://t.me/gramax_chat
+    email: ekaterina.pavlova@gram.ax
+
+servers:
+  - url: https://gram.ax/resources/
+    description: Докпортал Gramax
+
+tags:
+  - name: Catalogs
+    description: Операции для работы с каталогами, статьями и ресурсами
+
+paths:
+  /api/catalogs/:
+    get:
+      tags:
+        - Catalogs
+      summary: Получить список каталогов
+      description: Возвращает список всех доступных каталогов
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogList"
+              example:
+                data:
+                  - id: gramax
+                    title: Gramax Docs
+                  - id: support
+                    title: Support Documentation
+
+  /api/catalogs/{catalogId}/navigation:
+    get:
+      tags:
+        - Catalogs
+      summary: Получить навигацию по каталогу
+      description: Возвращает структуру навигации для указанного каталога
+      parameters:
+        - name: catalogId
+          in: path
+          required: true
+          description: ID каталога для получения навигации
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_]+$'
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogNavigation"
+              example:
+                data:
+                  - id: gramax/introduction.md
+                    title: Введение
+                    children:
+                      - id: gramax/getting-started.md
+                        title: Начало работы
+                  - id: gramax/features.md
+                    title: Возможности системы
+
+  /api/catalogs/{catalogId}/articles/{articleId}/html:
+    get:
+      tags:
+        - Catalogs
+      summary: Получить содержимое статьи
+      description: Возвращает HTML-содержимое указанной статьи
+      parameters:
+        - name: catalogId
+          in: path
+          required: true
+          description: ID каталога
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_]+$'
+        - name: articleId
+          in: path
+          required: true
+          description: ID статьи
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_/]+'
+        - name: originDomain
+          in: query
+          description: Оригинальный домен для загрузки ресурсов
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            text/html:
+              schema:
+                $ref: "#/components/schemas/ArticleHTML"
+
+  /api/catalogs/{catalogId}/articles/{articleId}/resources/{resourcePath}:
+    get:
+      tags:
+        - Catalogs
+      summary: Получить ресурс
+      description: Возвращает ресурс (изображение, файл и т.д.) для указанной статьи
+      parameters:
+        - name: catalogId
+          in: path
+          required: true
+          description: ID каталога
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_]+$'
+        - name: articleId
+          in: path
+          required: true
+          description: ID статьи
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9-_/]+'
+        - name: resourcePath
+          in: path
+          required: true
+          description: Путь к ресурсу в статье
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Успешный ответ
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "304":
+          description: Не изменено (для кэширования)
+
+components:
+  schemas:
+    CatalogRef:
+      description: Ссылка на каталог
+      required:
+        - id
+        - title
+      type: object
+      properties:
+        id:
+          type: string
+          example: gramax
+          description: Уникальный идентификатор каталога
+        title:
+          type: string
+          example: Gramax Docs
+          description: Название каталога
+
+    CatalogList:
+      description: Список каталогов
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogRef"
+          description: Массив ссылок на каталоги
+
+    ArticleRef:
+      description: Ссылка на статью
+      required:
+        - id
+        - title
+      type: object
+      properties:
+        id:
+          type: string
+          example: gramax/about-system.md
+          description: Уникальный идентификатор статьи
+        title:
+          type: string
+          example: О системе
+          description: Название статьи
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArticleRef"
+          description: Дочерние статьи (для иерархической структуры)
+
+    CatalogNavigation:
+      description: Структура навигации каталога
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArticleRef"
+          description: Массив ссылок на статьи, образующих структуру навигации
+
+    ArticleHTML:
+      description: HTML-содержимое статьи
+      type: string
+      example: '<article><ol depth="0"><li depth="0"><p>Откройте браузерное приложение <a href="https://app.gram.ax/">app.gram.ax</a>. Или скачайте десктопную версию с сайта <a href="https://gram.ax/">gram.ax</a>.</p></li><li depth="0"><p>Нажмите <code>Создать новый</code>.</p></li><li depth="0"><p>Добавьте новые статьи и оформите их. Например, создайте диаграмму, заметку, добавьте картинку.</p></li><li depth="0"><p>Измените URL статей.</p></li><li depth="0"><p>Настройте вид каталога на главной.</p></li></ol><span data-type="video"><iframe data-focusable="true" class="video-js" style="border:none" src="https://drive.google.com/file/d/1EtxWHwylkPn0TIo0XQw-73Y3pa_mh_bR/preview?usp=sharing" credentialless="true" width="640" height="480" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></span></article>'
+
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: user
+      description: Аутентификация с использованием куки сессии
+
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Авторизация с использованием Bearer-токена
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
